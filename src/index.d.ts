@@ -31,7 +31,7 @@ type Level = keyof Levels;
 type ValidLevel = Levels[Level];
 type ValidTimeUnit = TimeUnit[keyof TimeUnit];
 
-export interface LogItem {
+export interface LogItem<T = void> {
 	/**
 	 * Asserts the condition and then logs the following
 	 * arguments at the Error level if the condition
@@ -47,30 +47,30 @@ export interface LogItem {
 	 * @param time The amount of time to wait before logging again.
 	 * @param timeUnit The TimeUnit to use.
 	 */
-	AtMostEvery(time: number, timeUnit: ValidTimeUnit): LogItem;
+	AtMostEvery(time: number, timeUnit: ValidTimeUnit): LogItem<T>;
 
 	/**
 	 * Log only every `times` times.
 	 * @param times How often to log.
 	 */
-	Every(times: number): LogItem;
+	Every(times: number): LogItem<T>;
 
 	/**
 	 * Log the message.
 	 * @param message The message to log.
 	 * @param customData The extra data to log with.
 	 */
-	Log(message: LogMessage, customData?: object): void;
+	Log(message: LogMessage, customData?: object): T;
 
 	/**
 	 * Make the log throw an error.
 	 */
-	Throw(): LogItem;
+	Throw(): LogItem<never>;
 
 	/**
 	 * Returns a function that can be called which will log out the given arguments
 	 */
-	Wrap(): (message: LogMessage, customData?: object) => void;
+	Wrap(): (message: LogMessage, customData?: object) => T;
 }
 
 interface LogClass {
