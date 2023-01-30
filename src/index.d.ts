@@ -149,6 +149,8 @@ interface Log {
 	 * Construct a new Log object. This should only be called once per script!
 	 */
 	new (): LogClass;
+
+	SetInfoLogEnabled(this: void, enabled: boolean): void;
 }
 
 interface ILogConfigEntry {

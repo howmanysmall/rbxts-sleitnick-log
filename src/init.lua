@@ -115,7 +115,7 @@ local RunService = game:GetService("RunService")
 
 local InfoLog = require(script:FindFirstChild("InfoLog"))
 
-local USE_INFO_LOG_FOR_INFO = false
+local UseInfoLogForInfo = false
 
 local IS_STUDIO = RunService:IsStudio()
 local IS_SERVER = RunService:IsServer()
@@ -239,7 +239,7 @@ function LogItem:Log(message, customData)
 	local logLevelNum = logLevels[self._levelName]
 	-- FireAnalyticsLogEvent(logLevelNum, string.format("%*: %*", self._log._name, message), self._traceback, customData)
 
-	if USE_INFO_LOG_FOR_INFO then
+	if UseInfoLogForInfo then
 		if self._modifiers.Throw then
 			error(logMessage .. (customData and (" " .. HttpService:JSONEncode(customData)) or ""), 4)
 		elseif logLevelNum == logLevels.Info then
@@ -531,6 +531,10 @@ function Log.new()
 	self._stats = {}
 
 	return self
+end
+
+function Log.SetInfoLogEnabled(enabled: boolean)
+	UseInfoLogForInfo = enabled
 end
 
 function Log:_getLogStats(key)
