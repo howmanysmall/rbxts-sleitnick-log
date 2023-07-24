@@ -1,3 +1,4 @@
+-- I advise against using this. It may leak memory.
 local TestService = game:GetService("TestService")
 local function GetService(ServiceName: string)
 	return game:GetService(ServiceName)

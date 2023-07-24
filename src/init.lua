@@ -108,14 +108,12 @@
 --]]
 
 local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 
-local InfoLog = require(script:FindFirstChild("InfoLog"))
-
-local UseInfoLogForInfo = false
+local TS = require(ReplicatedStorage:WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local InfoLog = TS.import(script, ReplicatedStorage, "TS", "modules", "utility", "info-log")
 
 local IS_STUDIO = RunService:IsStudio()
 local IS_SERVER = RunService:IsServer()
@@ -124,6 +122,8 @@ local AnalyticsLogLevel = Enum.AnalyticsLogLevel
 
 local configModule = ReplicatedStorage:FindFirstChild("LogConfig", true)
 	or ReplicatedStorage:FindFirstChild("log-config", true)
+
+local UseInfoLogForInfo = false
 
 local config = "Debug"
 if configModule then
@@ -134,6 +134,15 @@ end
 
 local logLevel = nil
 local timeFunc = os.clock
+
+local _AnalyticsLogLevel = {
+	Trace = 0;
+	Debug = 1;
+	Information = 2;
+	Warning = 3;
+	Error = 4;
+	Fatal = 5;
+}
 
 local logLevels = {
 	Trace = AnalyticsLogLevel.Trace.Value;
@@ -177,18 +186,26 @@ local function ToSeconds(n, timeUnit)
 	end
 end
 
+local LogItems = setmetatable({}, {__mode = "k"})
+
 local LogItem = {}
 LogItem.ClassName = "LogItem"
 LogItem.__index = LogItem
 
-function LogItem.new(log, levelName, traceback, key)
-	return setmetatable({
+function LogItem.new(log, levelName, traceback, key, isDisabled: boolean, level)
+	local self = setmetatable({
+		_isDisabled = isDisabled;
+		_level = level;
+
 		_log = log;
 		_traceback = traceback;
 		_levelName = levelName;
 		_modifiers = {Throw = false};
 		_key = key;
 	}, LogItem)
+
+	LogItems[self] = true
+	return self
 end
 
 function LogItem:_shouldLog(stats)
@@ -219,6 +236,10 @@ function LogItem:Throw()
 end
 
 function LogItem:Log(message, customData)
+	if self._isDisabled then
+		return
+	end
+
 	local stats = self._log:_getLogStats(self._key)
 	if not self:_shouldLog(stats) then
 		return
@@ -239,9 +260,9 @@ function LogItem:Log(message, customData)
 	local logLevelNum = logLevels[self._levelName]
 	-- FireAnalyticsLogEvent(logLevelNum, string.format("%*: %*", self._log._name, message), self._traceback, customData)
 
-	if UseInfoLogForInfo then
+	if UseInfoLogForInfo or self._log._useInfoLog then
 		if self._modifiers.Throw then
-			error(logMessage .. (customData and (" " .. HttpService:JSONEncode(customData)) or ""), 4)
+			error(logMessage .. (customData and " " .. HttpService:JSONEncode(customData)) or "", 4)
 		elseif logLevelNum == logLevels.Info then
 			InfoLog(logMessage, customData or "")
 		elseif logLevelNum < logLevels.Warning then
@@ -251,7 +272,7 @@ function LogItem:Log(message, customData)
 		end
 	else
 		if self._modifiers.Throw then
-			error(logMessage .. (customData and (" " .. HttpService:JSONEncode(customData)) or ""), 4)
+			error(logMessage .. (customData and " " .. HttpService:JSONEncode(customData)) or "", 4)
 		elseif logLevelNum < logLevels.Warning then
 			print(logMessage, customData or "")
 		else
@@ -267,26 +288,30 @@ function LogItem:Wrap()
 end
 
 function LogItem:Assert(condition, ...)
-	if condition then
+	if not condition then
 		self:Throw():Log(...)
 	end
 
 	return condition, ...
 end
 
-local LogItemBlank = {}
-LogItemBlank.ClassName = "LogItemBlank"
-LogItemBlank.__index = LogItemBlank
-setmetatable(LogItemBlank, LogItem)
-
-function LogItemBlank.new(...)
-	local self = LogItem.new(...)
-	return setmetatable(self, LogItemBlank)
+function LogItem:__tostring()
+	return `LogItem<{self._log._name}>`
 end
 
-function LogItemBlank:Log()
-	-- Do nothing
-end
+-- local LogItemBlank = {}
+-- LogItemBlank.ClassName = "LogItemBlank"
+-- LogItemBlank.__index = LogItemBlank
+-- setmetatable(LogItemBlank, LogItem)
+
+-- function LogItemBlank.new(...)
+-- 	local self = LogItem.new(...)
+-- 	return setmetatable(self, LogItemBlank)
+-- end
+
+-- function LogItemBlank:Log()
+-- 	-- Do nothing
+-- end
 
 local LogStats = {}
 LogStats.ClassName = "LogStats"
@@ -511,7 +536,9 @@ local function GetName(String: string)
 		String = table.concat(StringArray, ".")
 	end
 
-	return if string.sub(String, -6) == ".story" then String else string.match(String, "([^%.]-)$")
+	return if string.sub(String, -6) == ".story"
+		then String
+		else string.match(String, '([^%.]-)"%]$') or string.match(String, "([^%.]-)$")
 end
 
 --[=[
@@ -524,17 +551,39 @@ end
 
 	@return Log
 ]=]
-function Log.new()
-	local self = setmetatable({}, Log)
+function Log.new(useInfoLog: boolean?)
 	local name = GetName(debug.info(2, "s"))
-	self._name = name
+	return Log.ForName(name, useInfoLog)
+end
+
+function Log.ForName(scriptName: string, useInfoLog: boolean?)
+	debug.setmemorycategory(scriptName)
+	local self = setmetatable({}, Log)
+
+	self._name = scriptName
 	self._stats = {}
+	self._useInfoLog = not not useInfoLog
+
+	self.Debug = self:AtDebug():Wrap()
+	self.Error = self:AtError():Wrap()
+	self.Fatal = self:AtFatal():Wrap()
+	self.Info = self:AtInfo():Wrap()
+	self.Trace = self:AtTrace():Wrap()
+	self.Warning = self:AtWarning():Wrap()
+
+	self.ErrorThrow = self:AtError():Throw():Wrap()
+	self.FatalThrow = self:AtFatal():Throw():Wrap()
 
 	return self
 end
 
 function Log.SetInfoLogEnabled(enabled: boolean)
 	UseInfoLogForInfo = enabled
+end
+
+function Log:SetInfoLog(useInfoLog: boolean)
+	self._useInfoLog = useInfoLog
+	return self
 end
 
 function Log:_getLogStats(key)
@@ -551,11 +600,14 @@ function Log:_at(level)
 	local l, f = debug.info(3, "lf")
 	local traceback = debug.traceback("Log", 3)
 	local key = tostring(l) .. tostring(f)
-	if level < logLevel then
-		return LogItemBlank.new(self, Log.LevelNames[level], traceback, key)
-	else
-		return LogItem.new(self, Log.LevelNames[level], traceback, key)
-	end
+
+	-- if level < logLevel then
+	-- 	return LogItemBlank.new(self, Log.LevelNames[level], traceback, key, level < logLevel)
+	-- else
+	-- 	return LogItem.new(self, Log.LevelNames[level], traceback, key)
+	-- end
+
+	return LogItem.new(self, Log.LevelNames[level], traceback, key, level < logLevel, level)
 end
 
 --[=[
@@ -623,7 +675,7 @@ end
 ]=]
 function Log:Assert(condition, ...)
 	if not condition then
-		self:_at(Log.Level.Error):Throw():Log(...)
+		self.ErrorThrow(...)
 	end
 
 	return condition, ...
@@ -640,15 +692,19 @@ do
 		local n = string.lower(name)
 		for levelName, level in Log.Level do
 			if string.lower(levelName) == n then
-				if IS_STUDIO then
-					local attr = IS_SERVER and "LogLevel" or "LogLevelClient"
-					local displayName = string.upper(string.sub(n, 1, 1)) .. string.sub(n, 2)
-					if tostring(Workspace:GetAttribute(attr) or "") ~= displayName then
-						Workspace:SetAttribute(attr, displayName)
-					end
+				-- 	if IS_STUDIO then
+				local attr = IS_SERVER and "LogLevel" or "LogLevelClient"
+				local displayName = string.upper(string.sub(n, 1, 1)) .. string.sub(n, 2)
+				if tostring(Workspace:GetAttribute(attr) or "") ~= displayName then
+					Workspace:SetAttribute(attr, displayName)
 				end
+				-- 	end
 
 				logLevel = level
+				for logItem in LogItems do
+					logItem._isDisabled = logItem._level < logLevel
+				end
+
 				return
 			end
 		end
@@ -770,12 +826,12 @@ do
 	end
 
 	assert(type(logLevel) == "number", "LogLevel failed to be determined")
-	if IS_STUDIO then
-		local attr = IS_SERVER and "LogLevel" or "LogLevelClient"
-		Workspace:GetAttributeChangedSignal(attr):Connect(function()
-			SetLogLevel(Workspace:GetAttribute(attr))
-		end)
-	end
+	-- if IS_STUDIO then
+	local attr = IS_SERVER and "LogLevel" or "LogLevelClient"
+	Workspace:GetAttributeChangedSignal(attr):Connect(function()
+		SetLogLevel(Workspace:GetAttribute(attr))
+	end)
+	-- end
 end
 
 export type Log = typeof(Log.new())

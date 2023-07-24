@@ -16,12 +16,23 @@
 		"prettier"
 	],
 	"extends": [
-		"eslint:recommended",
 		"plugin:@typescript-eslint/recommended",
 		"plugin:roblox-ts/recommended",
 		"plugin:prettier/recommended"
 	],
 	"rules": {
-		"prettier/prettier": "warn"
+		"prettier/prettier": [
+			"warn",
+			{
+				"semi": true,
+				"trailingComma": "all",
+				"singleQuote": false,
+				"printWidth": 120,
+				"tabWidth": 4,
+				"useTabs": true,
+				"endOfLine": "auto"
+			}
+		],
+		"roblox-ts/no-private-identifier": "off"
 	}
 }

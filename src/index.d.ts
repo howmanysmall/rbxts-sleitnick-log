@@ -75,6 +75,62 @@ export interface LogItem<T = void> {
 
 interface LogClass {
 	/**
+	 * Literally equivalent to `Log.AtDebug().Wrap()`.
+	 * @param message
+	 * @param customData
+	 */
+	Debug: (message: LogMessage, customData?: object) => void;
+
+	/**
+	 * Literally equivalent to `Log.AtError().Wrap()`.
+	 * @param message
+	 * @param customData
+	 */
+	Error: (message: LogMessage, customData?: object) => void;
+
+	/**
+	 * Literally equivalent to `Log.AtFatal().Wrap()`.
+	 * @param message
+	 * @param customData
+	 */
+	Fatal: (message: LogMessage, customData?: object) => void;
+
+	/**
+	 * Literally equivalent to `Log.AtInfo().Wrap()`.
+	 * @param message
+	 * @param customData
+	 */
+	Info: (message: LogMessage, customData?: object) => void;
+
+	/**
+	 * Literally equivalent to `Log.AtTrace().Wrap()`.
+	 * @param message
+	 * @param customData
+	 */
+	Trace: (message: LogMessage, customData?: object) => void;
+
+	/**
+	 * Literally equivalent to `Log.AtWarning().Wrap()`.
+	 * @param message
+	 * @param customData
+	 */
+	Warning: (message: LogMessage, customData?: object) => void;
+
+	/**
+	 * Literally equivalent to `Log.AtError().Throw().Wrap()`.
+	 * @param message
+	 * @param customData
+	 */
+	ErrorThrow: (message: LogMessage, customData?: object) => never;
+
+	/**
+	 * Literally equivalent to `Log.AtFatal().Throw().Wrap()`.
+	 * @param message
+	 * @param customData
+	 */
+	FatalThrow: (message: LogMessage, customData?: object) => never;
+
+	/**
 	 * Asserts the condition and then logs the following
 	 * arguments at the Error level if the condition
 	 * fails.
@@ -121,6 +177,12 @@ interface LogClass {
 	AtWarning(): LogItem;
 
 	/**
+	 * Sets whether or not this specific logger uses info logs.
+	 * @param useInfoLog
+	 */
+	SetInfoLog(useInfoLog: boolean): LogItem;
+
+	/**
 	 * This doesn't really do anything.
 	 */
 	Destroy(): void;
@@ -148,9 +210,19 @@ interface Log {
 	/**
 	 * Construct a new Log object. This should only be called once per script!
 	 */
-	new (): LogClass;
+	new (useInfoLog?: boolean): LogClass;
 
-	SetInfoLogEnabled(this: void, enabled: boolean): void;
+	/**
+	 * Create a new Log object with the given script name. This avoids having to use `debug.info`.
+	 * @param scriptName The Script's name.
+	 */
+	ForName: (scriptName: string, useInfoLog?: boolean) => LogClass;
+
+	/**
+	 * Globally sets if the info log is enabled.
+	 * @param enabled Whether or not the info log is enabled.
+	 */
+	SetInfoLogEnabled: (enabled: boolean) => void;
 }
 
 interface ILogConfigEntry {
