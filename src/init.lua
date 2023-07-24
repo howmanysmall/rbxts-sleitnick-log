@@ -262,7 +262,7 @@ function LogItem:Log(message, customData)
 
 	if UseInfoLogForInfo or self._log._useInfoLog then
 		if self._modifiers.Throw then
-			error(logMessage .. (customData and " " .. HttpService:JSONEncode(customData)) or "", 4)
+			error(logMessage .. (if customData then " " .. HttpService:JSONEncode(customData) else ""), 4)
 		elseif logLevelNum == logLevels.Info then
 			InfoLog(logMessage, customData or "")
 		elseif logLevelNum < logLevels.Warning then
@@ -272,7 +272,7 @@ function LogItem:Log(message, customData)
 		end
 	else
 		if self._modifiers.Throw then
-			error(logMessage .. (customData and " " .. HttpService:JSONEncode(customData)) or "", 4)
+			error(logMessage .. (if customData then " " .. HttpService:JSONEncode(customData) else ""), 4)
 		elseif logLevelNum < logLevels.Warning then
 			print(logMessage, customData or "")
 		else
