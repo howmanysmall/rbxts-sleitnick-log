@@ -76,7 +76,11 @@ end
 
 local function InfoLog(...: unknown)
 	local SourceModule, Line = debug.info(2, "sl")
-	TestService:Message(Concat(...), GetObjectFromPath[SourceModule], Line)
+	TestService:Message(
+		Concat(...),
+		if SourceModule then GetObjectFromPath[SourceModule] else "Unknown",
+		if Line then Line else -1
+	)
 end
 
 return InfoLog

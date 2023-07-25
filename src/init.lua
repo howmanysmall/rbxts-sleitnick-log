@@ -112,8 +112,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 
-local TS = require(ReplicatedStorage:WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local InfoLog = TS.import(script, ReplicatedStorage, "TS", "modules", "utility", "info-log")
+local InfoLog = require(script:FindFirstChild("InfoLog"))
 
 local IS_STUDIO = RunService:IsStudio()
 local IS_SERVER = RunService:IsServer()
@@ -264,19 +263,39 @@ function LogItem:Log(message, customData)
 		if self._modifiers.Throw then
 			error(logMessage .. (if customData then " " .. HttpService:JSONEncode(customData) else ""), 4)
 		elseif logLevelNum == logLevels.Info then
-			InfoLog(logMessage, customData or "")
+			if customData then
+				InfoLog(logMessage, customData or "")
+			else
+				InfoLog(logMessage)
+			end
 		elseif logLevelNum < logLevels.Warning then
-			print(logMessage, customData or "")
+			if customData then
+				print(logMessage, customData or "")
+			else
+				print(logMessage)
+			end
 		else
-			warn(logMessage, customData or "")
+			if customData then
+				warn(logMessage, customData or "")
+			else
+				warn(logMessage)
+			end
 		end
 	else
 		if self._modifiers.Throw then
 			error(logMessage .. (if customData then " " .. HttpService:JSONEncode(customData) else ""), 4)
 		elseif logLevelNum < logLevels.Warning then
-			print(logMessage, customData or "")
+			if customData then
+				print(logMessage, customData or "")
+			else
+				print(logMessage)
+			end
 		else
-			warn(logMessage, customData or "")
+			if customData then
+				warn(logMessage, customData or "")
+			else
+				warn(logMessage)
+			end
 		end
 	end
 end
@@ -298,20 +317,6 @@ end
 function LogItem:__tostring()
 	return `LogItem<{self._log._name}>`
 end
-
--- local LogItemBlank = {}
--- LogItemBlank.ClassName = "LogItemBlank"
--- LogItemBlank.__index = LogItemBlank
--- setmetatable(LogItemBlank, LogItem)
-
--- function LogItemBlank.new(...)
--- 	local self = LogItem.new(...)
--- 	return setmetatable(self, LogItemBlank)
--- end
-
--- function LogItemBlank:Log()
--- 	-- Do nothing
--- end
 
 local LogStats = {}
 LogStats.ClassName = "LogStats"
