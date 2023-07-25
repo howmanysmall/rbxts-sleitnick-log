@@ -73,7 +73,7 @@ export interface LogItem<T = void> {
 	Wrap(): (message: LogMessage, customData?: object) => T;
 }
 
-interface LogClass {
+export interface LogClass {
 	/**
 	 * Literally equivalent to `Log.AtDebug().Wrap()`.
 	 * @param message
