@@ -4,8 +4,8 @@ type ReverseMap<T extends Record<keyof T, keyof any>> = {
 	}[keyof T];
 };
 
-type LoggingFunction = () => LuaTuple<[message: unknown, customData?: unknown]>;
-type LogMessage = string | LoggingFunction | object;
+export type LoggingFunction = () => LuaTuple<[message: unknown, customData?: unknown]>;
+export type LogMessage = string | LoggingFunction | object;
 
 interface Levels {
 	readonly Trace: 0;
@@ -27,9 +27,9 @@ interface TimeUnit {
 	readonly Years: 7;
 }
 
-type Level = keyof Levels;
-type ValidLevel = Levels[Level];
-type ValidTimeUnit = TimeUnit[keyof TimeUnit];
+export type Level = keyof Levels;
+export type ValidLevel = Levels[Level];
+export type ValidTimeUnit = TimeUnit[keyof TimeUnit];
 
 export interface LogItem<T = void> {
 	/**
