@@ -1,3 +1,6 @@
+--!native
+--!optimize 2
+
 -- Log
 -- Stephen Leitnick
 -- April 20, 2021

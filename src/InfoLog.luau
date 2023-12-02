@@ -1,5 +1,11 @@
+--!native
+--!optimize 2
+
 -- I advise against using this. It may leak memory.
+local RunService = game:GetService("RunService")
 local TestService = game:GetService("TestService")
+local GcTracker = require(script.Parent:FindFirstChild("GcTracker"))
+
 local function GetService(ServiceName: string)
 	return game:GetService(ServiceName)
 end
@@ -13,6 +19,8 @@ function ServicesMetatable:__index(Index)
 end
 
 local Services = setmetatable({}, ServicesMetatable)
+local Tracker = GcTracker.new()
+local CanRun = not script:GetActor()
 
 local Metatable = {}
 function Metatable:__index(Path: string): Instance?
@@ -36,14 +44,8 @@ function Metatable:__index(Path: string): Instance?
 		end
 	end
 
-	if CurrentObject then
-		local Connection: RBXScriptConnection?
-		Connection = CurrentObject.AncestryChanged:Connect(function()
-			if Connection and Connection.Connected then
-				Connection:Disconnect()
-				Connection = nil
-			end
-
+	if CurrentObject and CanRun then
+		Tracker.track(CurrentObject, function()
 			self[Path] = nil
 		end)
 	end
@@ -81,6 +83,12 @@ local function InfoLog(...: unknown)
 		if SourceModule then GetObjectFromPath[SourceModule] else "Unknown",
 		if Line then Line else -1
 	)
+end
+
+if CanRun then
+	RunService.PostSimulation:Connect(function()
+		Tracker.update()
+	end)
 end
 
 return InfoLog

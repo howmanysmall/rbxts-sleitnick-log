@@ -8,23 +8,23 @@ type LoggingFunction = () => LuaTuple<[message: unknown, customData?: unknown]>;
 type LogMessage = string | LoggingFunction | object;
 
 interface Levels {
-	Trace: 0;
-	Debug: 1;
-	Info: 2;
-	Warning: 3;
-	Error: 4;
-	Fatal: 5;
+	readonly Trace: 0;
+	readonly Debug: 1;
+	readonly Info: 2;
+	readonly Warning: 3;
+	readonly Error: 4;
+	readonly Fatal: 5;
 }
 
 interface TimeUnit {
-	Milliseconds: 0;
-	Seconds: 1;
-	Minutes: 2;
-	Hours: 3;
-	Days: 4;
-	Weeks: 5;
-	Months: 6;
-	Years: 7;
+	readonly Milliseconds: 0;
+	readonly Seconds: 1;
+	readonly Minutes: 2;
+	readonly Hours: 3;
+	readonly Days: 4;
+	readonly Weeks: 5;
+	readonly Months: 6;
+	readonly Years: 7;
 }
 
 type Level = keyof Levels;
@@ -40,7 +40,7 @@ export interface LogItem<T = void> {
 	 * @param message The message to assert with.
 	 * @param customData The extra data.
 	 */
-	Assert<T>(condition: T, message: LogMessage, customData?: object): asserts condition;
+	Assert<Condition>(condition: Condition, message: LogMessage, customData?: unknown): asserts condition;
 
 	/**
 	 * Log only once every `time` `TimeUnit`.
@@ -60,7 +60,7 @@ export interface LogItem<T = void> {
 	 * @param message The message to log.
 	 * @param customData The extra data to log with.
 	 */
-	Log(message: LogMessage, customData?: object): T;
+	Log(message: LogMessage, customData?: unknown): T;
 
 	/**
 	 * Make the log throw an error.
@@ -70,7 +70,7 @@ export interface LogItem<T = void> {
 	/**
 	 * Returns a function that can be called which will log out the given arguments
 	 */
-	Wrap(): (message: LogMessage, customData?: object) => T;
+	Wrap(): (message: LogMessage, customData?: unknown) => T;
 }
 
 export interface LogClass {
@@ -79,56 +79,56 @@ export interface LogClass {
 	 * @param message
 	 * @param customData
 	 */
-	Debug: (message: LogMessage, customData?: object) => void;
+	Debug: (message: LogMessage, customData?: unknown) => void;
 
 	/**
 	 * Literally equivalent to `Log.AtError().Wrap()`.
 	 * @param message
 	 * @param customData
 	 */
-	Error: (message: LogMessage, customData?: object) => void;
+	Error: (message: LogMessage, customData?: unknown) => void;
 
 	/**
 	 * Literally equivalent to `Log.AtFatal().Wrap()`.
 	 * @param message
 	 * @param customData
 	 */
-	Fatal: (message: LogMessage, customData?: object) => void;
+	Fatal: (message: LogMessage, customData?: unknown) => void;
 
 	/**
 	 * Literally equivalent to `Log.AtInfo().Wrap()`.
 	 * @param message
 	 * @param customData
 	 */
-	Info: (message: LogMessage, customData?: object) => void;
+	Info: (message: LogMessage, customData?: unknown) => void;
 
 	/**
 	 * Literally equivalent to `Log.AtTrace().Wrap()`.
 	 * @param message
 	 * @param customData
 	 */
-	Trace: (message: LogMessage, customData?: object) => void;
+	Trace: (message: LogMessage, customData?: unknown) => void;
 
 	/**
 	 * Literally equivalent to `Log.AtWarning().Wrap()`.
 	 * @param message
 	 * @param customData
 	 */
-	Warning: (message: LogMessage, customData?: object) => void;
+	Warning: (message: LogMessage, customData?: unknown) => void;
 
 	/**
 	 * Literally equivalent to `Log.AtError().Throw().Wrap()`.
 	 * @param message
 	 * @param customData
 	 */
-	ErrorThrow: (message: LogMessage, customData?: object) => never;
+	ErrorThrow: (message: LogMessage, customData?: unknown) => never;
 
 	/**
 	 * Literally equivalent to `Log.AtFatal().Throw().Wrap()`.
 	 * @param message
 	 * @param customData
 	 */
-	FatalThrow: (message: LogMessage, customData?: object) => never;
+	FatalThrow: (message: LogMessage, customData?: unknown) => never;
 
 	/**
 	 * Asserts the condition and then logs the following
@@ -138,7 +138,7 @@ export interface LogClass {
 	 * @param message The message to assert with.
 	 * @param customData The extra data.
 	 */
-	Assert<T>(condition: T, message: LogMessage, customData?: object): asserts condition;
+	Assert<T>(condition: T, message: LogMessage, customData?: unknown): asserts condition;
 
 	/**
 	 * Creates a LogItem at the given level.
@@ -193,56 +193,61 @@ interface Log {
 	 * The Level enum.
 	 * @readonly
 	 */
-	Level: Levels;
+	readonly Level: Levels;
 
 	/**
 	 * An inverse of the Level enum.
 	 * @readonly
 	 */
-	LevelNames: ReverseMap<Levels>;
+	readonly LevelNames: ReverseMap<Levels>;
 
 	/**
 	 * The TimeUnit enum.
 	 * @readonly
 	 */
-	TimeUnit: TimeUnit;
+	readonly TimeUnit: TimeUnit;
 
 	/**
 	 * Construct a new Log object. This should only be called once per script!
+	 * @param useInfoLog Whether or not to use the info log.
 	 */
 	new (useInfoLog?: boolean): LogClass;
 
 	/**
 	 * Create a new Log object with the given script name. This avoids having to use `debug.info`.
 	 * @param scriptName The Script's name.
+	 * @param useInfoLog Whether or not to use the info log.
 	 */
-	ForName: (scriptName: string, useInfoLog?: boolean) => LogClass;
+	readonly ForName: (scriptName: string, useInfoLog?: boolean) => LogClass;
 
 	/**
 	 * Globally sets if the info log is enabled.
 	 * @param enabled Whether or not the info log is enabled.
 	 */
-	SetInfoLogEnabled: (enabled: boolean) => void;
+	readonly SetInfoLogEnabled: (enabled: boolean) => void;
 }
 
-interface ILogConfigEntry {
-	GameId?: number;
-	GameIds?: Array<number>;
+interface LogConfigEntry {
+	readonly GameId?: number;
+	readonly GameIds?: Array<number>;
 
-	PlaceId?: number;
-	PlaceIds?: Array<number>;
+	readonly PlaceId?: number;
+	readonly PlaceIds?: Array<number>;
 
-	Server: Level;
-	Client: Level;
+	readonly Server: Level;
+	readonly Client: Level;
 }
 
-export type ILogConfig =
+export type LogConfig =
 	| Level
 	| {
-			Default?: Level | ILogConfigEntry;
-			Studio?: Level | ILogConfigEntry;
-			[key: string]: Level | ILogConfigEntry | undefined;
+			readonly Default?: Level | LogConfigEntry;
+			readonly Studio?: Level | LogConfigEntry;
+			readonly [key: string]: Level | LogConfigEntry | undefined;
 	  };
+
+/** @deprecated */
+export type ILogConfig = LogConfig;
 
 declare const Log: Log;
 
