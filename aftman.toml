@@ -1,0 +1,1 @@
+tools = { lua-lsp = "JohnnyMorganz/luau-lsp@1.26.0", rojo = "rojo-rbx/rojo@7.3.0", selene = "Kampfkarren/selene@0.26.1", stylua = "JohnnyMorganz/StyLua@0.19.1", wally = "UpliftGames/wally@0.3.2" }
