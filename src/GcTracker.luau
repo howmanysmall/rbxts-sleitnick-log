@@ -34,16 +34,16 @@ local function GCTracker(): GCTracker
 	-- key: token
 	-- value: tracked object (weak)
 	local tobj = {}
-	setmetatable(tobj, {__mode = "vs"})
+	setmetatable(tobj, { __mode = "vs" })
 
 	-- key: token
 	-- value: destructor
 	local tdtor = {}
 
-	local self = {lasttoken = nil}
+	local self = { lasttoken = nil }
 
 	function self.track(obj, dtor)
-		assert(type(dtor) == "function")
+		assert(type(dtor) == "function", `Function expected, received "{type(dtor)}" instead.`)
 
 		local token = newproxy()
 
@@ -54,15 +54,18 @@ local function GCTracker(): GCTracker
 	end
 
 	function self.forget(token)
-		assert(type(token) == "userdata")
-		assert(tdtor[token] ~= nil)
+		assert(type(token) == "userdata", `"userdata" expected, received "{type(token)}" instead.`)
+		assert(tdtor[token] ~= nil, "No token was provided.")
 
 		tobj[token] = nil
 		tdtor[token] = nil
 	end
 
 	function self.update(n: number?)
-		assert(n == nil or type(n) == "number")
+		assert(
+			n == nil or type(n) == "number",
+			`Either no number was provided, or received "{type(n)}" instead of one.`
+		)
 
 		if n then
 			local lt = self.lasttoken
@@ -70,7 +73,7 @@ local function GCTracker(): GCTracker
 				lt = nil
 			end
 
-			for i = 1, n do
+			for _index = 1, n do
 				local k, v = next(tdtor, lt)
 
 				if k == nil then
@@ -100,4 +103,4 @@ local function GCTracker(): GCTracker
 	return self
 end
 
-return {new = GCTracker}
+return { new = GCTracker }

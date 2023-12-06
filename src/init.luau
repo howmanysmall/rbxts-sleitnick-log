@@ -138,32 +138,32 @@ local logLevel = nil
 local timeFunc = os.clock
 
 local _AnalyticsLogLevel = {
-	Trace = 0;
-	Debug = 1;
-	Information = 2;
-	Warning = 3;
-	Error = 4;
-	Fatal = 5;
+	Trace = 0,
+	Debug = 1,
+	Information = 2,
+	Warning = 3,
+	Error = 4,
+	Fatal = 5,
 }
 
 local logLevels = {
-	Trace = AnalyticsLogLevel.Trace.Value;
-	Debug = AnalyticsLogLevel.Debug.Value;
-	Info = AnalyticsLogLevel.Information.Value;
-	Warning = AnalyticsLogLevel.Warning.Value;
-	Error = AnalyticsLogLevel.Error.Value;
-	Fatal = AnalyticsLogLevel.Fatal.Value;
+	Trace = AnalyticsLogLevel.Trace.Value,
+	Debug = AnalyticsLogLevel.Debug.Value,
+	Info = AnalyticsLogLevel.Information.Value,
+	Warning = AnalyticsLogLevel.Warning.Value,
+	Error = AnalyticsLogLevel.Error.Value,
+	Fatal = AnalyticsLogLevel.Fatal.Value,
 }
 
 local timeUnits = {
-	Milliseconds = 0;
-	Seconds = 1;
-	Minutes = 2;
-	Hours = 3;
-	Days = 4;
-	Weeks = 5;
-	Months = 6;
-	Years = 7;
+	Milliseconds = 0,
+	Seconds = 1,
+	Minutes = 2,
+	Hours = 3,
+	Days = 4,
+	Weeks = 5,
+	Months = 6,
+	Years = 7,
 }
 
 local function ToSeconds(n, timeUnit)
@@ -188,7 +188,7 @@ local function ToSeconds(n, timeUnit)
 	end
 end
 
-local LogItems = setmetatable({}, {__mode = "k"})
+local LogItems = setmetatable({}, { __mode = "k" })
 
 local LogItem = {}
 LogItem.ClassName = "LogItem"
@@ -196,14 +196,14 @@ LogItem.__index = LogItem
 
 function LogItem.new(log, levelName, traceback, key, isDisabled: boolean, level)
 	local self = setmetatable({
-		_isDisabled = isDisabled;
-		_level = level;
+		_isDisabled = isDisabled,
+		_level = level,
 
-		_log = log;
-		_traceback = traceback;
-		_levelName = levelName;
-		_modifiers = {Throw = false};
-		_key = key;
+		_log = log,
+		_traceback = traceback,
+		_levelName = levelName,
+		_modifiers = { Throw = false },
+		_key = key,
 	}, LogItem)
 
 	LogItems[self] = true
@@ -845,6 +845,6 @@ end
 export type Log = typeof(Log.new())
 table.freeze(Log)
 return table.freeze({
-	Log = Log;
-	default = Log;
+	Log = Log,
+	default = Log,
 })

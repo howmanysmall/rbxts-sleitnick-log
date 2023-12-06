@@ -76,7 +76,7 @@ local function Concat(...)
 	end
 end
 
-local function InfoLog(...: unknown)
+local function InfoLog(...: "Unknown")
 	local SourceModule, Line = debug.info(2, "sl")
 	TestService:Message(
 		Concat(...),
