@@ -118,9 +118,6 @@ local Workspace = game:GetService("Workspace")
 
 local InfoLog = require(script:FindFirstChild("InfoLog"))
 
-local IS_STUDIO = RunService:IsStudio()
-local IS_SERVER = RunService:IsServer()
-
 local Plugin = script:FindFirstAncestorOfClass("Plugin")
 
 local configModule = if Plugin
@@ -134,6 +131,13 @@ local configModule = if Plugin
 	)
 
 local UseInfoLogForInfo = false
+
+local IS_STUDIO = RunService:IsStudio()
+local IS_SERVER = RunService:IsServer()
+
+if Plugin then
+	IS_STUDIO = script:FindFirstAncestorOfClass("PluginDebugService") ~= nil
+end
 
 local config = "Debug"
 if configModule then
