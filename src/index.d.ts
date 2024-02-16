@@ -1,11 +1,12 @@
-type ReverseMap<T extends Record<keyof T, keyof any>> = {
+type ReverseMap<T extends Record<keyof T, keyof never>> = {
 	[P in T[keyof T]]: {
 		[K in keyof T]: T[K] extends P ? K : never;
 	}[keyof T];
 };
 
-export type LoggingFunction = () => LuaTuple<[message: unknown, customData?: unknown]>;
-export type LogMessage = string | LoggingFunction | object;
+export type RawLogMessage = string | object | boolean | number;
+export type LoggingFunction = () => LuaTuple<[message: RawLogMessage, customData?: unknown]>;
+export type LogMessage = RawLogMessage | LoggingFunction;
 
 interface Levels {
 	readonly Trace: 0;
@@ -36,6 +37,9 @@ export interface LogItem<T = void> {
 	 * Asserts the condition and then logs the following
 	 * arguments at the Error level if the condition
 	 * fails.
+	 *
+	 * I wouldn't use this since the type is funky.
+	 *
 	 * @param condition The condition you are checking.
 	 * @param message The message to assert with.
 	 * @param customData The extra data.
@@ -73,6 +77,9 @@ export interface LogItem<T = void> {
 	Wrap(): (message: LogMessage, customData?: unknown) => T;
 }
 
+/**
+ * The logger class.
+ */
 export interface LogClass {
 	/**
 	 * Literally equivalent to `Log.AtDebug().Wrap()`.
@@ -224,20 +231,114 @@ interface Log {
 	 * Globally sets if the info log is enabled.
 	 * @param enabled Whether or not the info log is enabled.
 	 */
+	readonly SetGlobalInfoLogEnabled: (enabled: boolean) => void;
+
+	/** @deprecated Use {@linkcode SetGlobalInfoLogEnabled} instead. */
 	readonly SetInfoLogEnabled: (enabled: boolean) => void;
 }
 
 interface LogConfigEntry {
 	readonly GameId?: number;
-	readonly GameIds?: Array<number>;
+	readonly GameIds?: ReadonlyArray<number>;
 
 	readonly PlaceId?: number;
-	readonly PlaceIds?: Array<number>;
+	readonly PlaceIds?: ReadonlyArray<number>;
 
 	readonly Server: Level;
 	readonly Client: Level;
 }
 
+/**
+ * Create a LogConfig ModuleScript anywhere in ReplicatedStorage. The configuration lets developers tun the
+ * lowest logging level based on various environment conditions. The LogConfig will be automatically required
+ * and used to set the log level. For Plugins, this will be somewhere under `ThisModuleScript:FindFirstAncestorOfClass("Plugin")`.
+ *
+ * For instance, this could be a script located at ReplicatedStorage.MyGameConfig.LogConfig. There just needs to be some
+ * LogConfig-named ModuleScript within ReplicatedStorage / Plugin.
+ *
+ * Below are a few examples of possible LogConfig ModuleScripts:
+ *
+ * ```ts
+ * // Set "Info" as default log level for all environments:
+ * const logConfig: LogConfig = "Info";
+ * export = logConfig;
+ * ```
+ *
+ * ```ts
+ * // To set a configuration that is different while in Studio:
+ * const logConfig: LogConfig = {
+ * 	Studio: "Debug",
+ * 	Other: "Warning", // "Other" can be anything other than Studio (e.g. could be named "Default", which is the specifically named)
+ * };
+ * export = logConfig;
+ * ```
+ *
+ * ```ts
+ * // Fine-tune between server and client:
+ * const logConfig: LogConfig = {
+ * 	Studio: {
+ * 		Server: "Info",
+ * 		Client: "Debug",
+ * 	},
+ * 	Other: "Warning",
+ * };
+ * export = logConfig;
+ * ```
+ *
+ * ```ts
+ * // Fine-tune based on PlaceIds:
+ * const logConfig: LogConfig = {
+ * 	Studio: {
+ * 		Server: "Info",
+ * 		Client: "Debug",
+ * 	},
+ * 	Other: {
+ * 		PlaceIds: [123456, 234567],
+ * 		Server: "Fatal",
+ * 		Client: "Warning",
+ * 	},
+ * };
+ * export = logConfig;
+ * ```
+ *
+ * ```ts
+ * // Fine-tune based on GameIds:
+ * const logConfig: LogConfig = {
+ * 	Studio: {
+ * 		Server: "Info",
+ * 		Client: "Debug",
+ * 	},
+ * 	Other: {
+ * 		GameIds: [123456, 234567],
+ * 		Server: "Fatal",
+ * 		Client: "Warning",
+ * 	},
+ * };
+ * export = logConfig;
+ * ```
+ *
+ * ```ts
+ * // Example of full-scale config with multiple environments:
+ * const logConfig: LogConfig = {
+ * 	Studio: {
+ * 		Server: "Debug",
+ * 		Client: "Debug",
+ * 	},
+ * 	Development: {
+ * 		PlaceIds: [1234567, 7654321],
+ * 		Server: "Trace",
+ * 		Client: "Trace",
+ * 	},
+ * 	Production: {
+ * 		PlaceId: 2345678,
+ * 		Server: "Fatal",
+ * 		Client: "Warning",
+ * 	},
+ * 	Default: "Info",
+ * };
+ * export = logConfig;
+ * ```
+ */
 export type LogConfig =
 	| Level
 	| {
@@ -246,7 +347,9 @@ export type LogConfig =
 			readonly [key: string]: Level | LogConfigEntry | undefined;
 	  };
 
-/** @deprecated */
+/**
+ * @deprecated Use {@linkcode LogConfig} instead.
+ */
 export type ILogConfig = LogConfig;
 
 declare const Log: Log;

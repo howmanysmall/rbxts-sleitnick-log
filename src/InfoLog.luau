@@ -59,21 +59,30 @@ local GetObjectFromPath = setmetatable({}, Metatable)
 local function Concat(...)
 	local Length = select("#", ...)
 	if Length == 1 then
-		return tostring(...)
-	elseif Length == 2 then
+		return `{...}`
+	end
+
+	if Length == 2 then
 		local First, Second = ...
 		return `{First} {Second}`
-	elseif Length == 3 then
+	end
+
+	if Length == 3 then
 		local First, Second, Third = ...
 		return `{First} {Second} {Third}`
-	else
-		local Array = table.create(Length)
-		for Index = 1, Length do
-			Array[Index] = tostring(select(Index, ...))
-		end
-
-		return table.concat(Array, " ")
 	end
+
+	if Length == 4 then
+		local First, Second, Third, Fourth = ...
+		return `{First} {Second} {Third} {Fourth}`
+	end
+
+	local Array = table.create(Length)
+	for Index = 1, Length do
+		Array[Index] = `{select(Index, ...)}`
+	end
+
+	return table.concat(Array, " ")
 end
 
 local function InfoLog(...: unknown)

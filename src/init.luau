@@ -1,4 +1,5 @@
 --!native
+--!nonstrict
 --!optimize 2
 
 -- Log
@@ -110,20 +111,27 @@
 		}
 --]]
 
-local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local InfoLog = require(script:FindFirstChild("InfoLog"))
 
 local IS_STUDIO = RunService:IsStudio()
 local IS_SERVER = RunService:IsServer()
 
-local AnalyticsLogLevel = Enum.AnalyticsLogLevel
+local Plugin = script:FindFirstAncestorOfClass("Plugin")
 
-local configModule = ReplicatedStorage:FindFirstChild("LogConfig", true)
-	or ReplicatedStorage:FindFirstChild("log-config", true)
+local configModule = if Plugin
+	then Plugin:FindFirstChild("LogConfig", true)
+		or Plugin:FindFirstChild("log-config", true)
+		or ReplicatedStorage:FindFirstChild("LogConfig", true)
+		or ReplicatedStorage:FindFirstChild("log-config", true)
+	else ReplicatedStorage:FindFirstChild("LogConfig", true) or ReplicatedStorage:FindFirstChild(
+		"log-config",
+		true
+	)
 
 local UseInfoLogForInfo = false
 
@@ -137,25 +145,37 @@ end
 local logLevel = nil
 local timeFunc = os.clock
 
-local _AnalyticsLogLevel = {
-	Trace = 0;
-	Debug = 1;
-	Information = 2;
-	Warning = 3;
-	Error = 4;
-	Fatal = 5;
-}
+local AnalyticsLogLevel = (function()
+	-- Since AnalyticsService was removed, there's no guarantee that this will exist
+	-- in the future, so let's pcall it.
+	local EnumExists, AnalyticsLogLevelEnum = pcall(function()
+		return Enum.AnalyticsLogLevel
+	end)
 
-local logLevels = {
+	if EnumExists and typeof(AnalyticsLogLevelEnum) == "Enum" then
+		return AnalyticsLogLevelEnum
+	end
+
+	return table.freeze({
+		Trace = {Value = 0};
+		Debug = {Value = 1};
+		Information = {Value = 2};
+		Warning = {Value = 3};
+		Error = {Value = 4};
+		Fatal = {Value = 5};
+	})
+end)()
+
+local logLevels = table.freeze({
 	Trace = AnalyticsLogLevel.Trace.Value;
 	Debug = AnalyticsLogLevel.Debug.Value;
 	Info = AnalyticsLogLevel.Information.Value;
 	Warning = AnalyticsLogLevel.Warning.Value;
 	Error = AnalyticsLogLevel.Error.Value;
 	Fatal = AnalyticsLogLevel.Fatal.Value;
-}
+})
 
-local timeUnits = {
+local timeUnits = table.freeze({
 	Milliseconds = 0;
 	Seconds = 1;
 	Minutes = 2;
@@ -164,7 +184,7 @@ local timeUnits = {
 	Weeks = 5;
 	Months = 6;
 	Years = 7;
-}
+})
 
 local function ToSeconds(n, timeUnit)
 	if timeUnit == timeUnits.Milliseconds then
@@ -208,6 +228,10 @@ function LogItem.new(log, levelName, traceback, key, isDisabled: boolean, level)
 
 	LogItems[self] = true
 	return self
+end
+
+function LogItem.instanceof(Value)
+	return type(Value) == "table" and getmetatable(Value) == LogItem
 end
 
 function LogItem:_shouldLog(stats)
@@ -258,27 +282,26 @@ function LogItem:Log(message, customData)
 	end
 
 	stats:_setTimestamp(timeFunc())
-	local logMessage = string.format("%*: [%*] %*", self._log._name, self._levelName, message)
+	local logMessage = `{self._log._name}: [{self._levelName}] {message}`
 	local logLevelNum = logLevels[self._levelName]
-	-- FireAnalyticsLogEvent(logLevelNum, string.format("%*: %*", self._log._name, message), self._traceback, customData)
 
 	if UseInfoLogForInfo or self._log._useInfoLog then
 		if self._modifiers.Throw then
-			error(logMessage .. (if customData then " " .. HttpService:JSONEncode(customData) else ""), 4)
+			error(`{logMessage}{if customData then ` {HttpService:JSONEncode(customData)}` else ""}`, 4)
 		elseif logLevelNum == logLevels.Info then
-			if customData then
+			if customData ~= nil then
 				InfoLog(logMessage, customData or "")
 			else
 				InfoLog(logMessage)
 			end
 		elseif logLevelNum < logLevels.Warning then
-			if customData then
+			if customData ~= nil then
 				print(logMessage, customData or "")
 			else
 				print(logMessage)
 			end
 		else
-			if customData then
+			if customData ~= nil then
 				warn(logMessage, customData or "")
 			else
 				warn(logMessage)
@@ -286,15 +309,15 @@ function LogItem:Log(message, customData)
 		end
 	else
 		if self._modifiers.Throw then
-			error(logMessage .. (if customData then " " .. HttpService:JSONEncode(customData) else ""), 4)
+			error(`{logMessage}{if customData then ` {HttpService:JSONEncode(customData)}` else ""}`, 4)
 		elseif logLevelNum < logLevels.Warning then
-			if customData then
+			if customData ~= nil then
 				print(logMessage, customData or "")
 			else
 				print(logMessage)
 			end
 		else
-			if customData then
+			if customData ~= nil then
 				warn(logMessage, customData or "")
 			else
 				warn(logMessage)
@@ -326,10 +349,14 @@ LogStats.ClassName = "LogStats"
 LogStats.__index = LogStats
 
 function LogStats.new()
-	local self = setmetatable({}, LogStats)
-	self._invocationCount = 0
-	self._lastTimestamp = 0
-	return self
+	return setmetatable({
+		_invocationCount = 0;
+		_lastTimestamp = 0;
+	}, LogStats)
+end
+
+function LogStats.instanceof(Value)
+	return type(Value) == "table" and getmetatable(Value) == LogStats
 end
 
 function LogStats:_checkAndIncrementCount(rateLimit)
@@ -534,9 +561,10 @@ Log.LevelNames = {}
 for name, num in Log.Level do
 	Log.LevelNames[num] = name
 end
+table.freeze(Log.LevelNames)
 
 local function GetName(String: string)
-	local NewString = string.match(String, '"(.+)"%]')
+	local NewString = string.match(String, "\"(.+)\"%]")
 	if NewString and string.sub(NewString, -6) == ".story" then
 		local Array = string.split(NewString, ".")
 		local Length = #Array
@@ -546,7 +574,7 @@ local function GetName(String: string)
 
 	return if string.sub(String, -6) == ".story"
 		then String
-		else string.match(String, '([^%.]-)"%]$') or string.match(String, "([^%.]-)$")
+		else string.match(String, "([^%.]-)\"%]$") or string.match(String, "([^%.]-)$")
 end
 
 --[=[
@@ -585,9 +613,14 @@ function Log.ForName(scriptName: string, useInfoLog: boolean?)
 	return self
 end
 
-function Log.SetInfoLogEnabled(enabled: boolean)
+function Log.instanceof(Value)
+	return type(Value) == "table" and getmetatable(Value) == Log
+end
+
+function Log.SetGlobalInfoLogEnabled(enabled: boolean)
 	UseInfoLogForInfo = enabled
 end
+Log.SetInfoLogEnabled = Log.SetGlobalInfoLogEnabled
 
 function Log:SetInfoLog(useInfoLog: boolean)
 	self._useInfoLog = useInfoLog
@@ -604,26 +637,17 @@ function Log:_getLogStats(key)
 	return stats
 end
 
-function Log:_at(level)
+local function At(self, level): any
 	local l, f = debug.info(3, "lf")
-	local traceback = debug.traceback("Log", 3)
-	local key = tostring(l) .. tostring(f)
-
-	-- if level < logLevel then
-	-- 	return LogItemBlank.new(self, Log.LevelNames[level], traceback, key, level < logLevel)
-	-- else
-	-- 	return LogItem.new(self, Log.LevelNames[level], traceback, key)
-	-- end
-
-	return LogItem.new(self, Log.LevelNames[level], traceback, key, level < logLevel, level)
+	return LogItem.new(self, Log.LevelNames[level], debug.traceback("Log", 3), `{l}{f}`, level < logLevel, level)
 end
 
 --[=[
 	@param level LogLevel
 	@return LogItem
 ]=]
-function Log:At(level: number)
-	return self:_at(level)
+function Log:At(level)
+	return At(self, level)
 end
 
 --[=[
@@ -631,7 +655,7 @@ end
 	Get a LogItem at the Trace log level.
 ]=]
 function Log:AtTrace()
-	return self:_at(Log.Level.Trace)
+	return At(self, Log.Level.Trace)
 end
 
 --[=[
@@ -639,7 +663,7 @@ end
 	Get a LogItem at the Debug log level.
 ]=]
 function Log:AtDebug()
-	return self:_at(Log.Level.Debug)
+	return At(self, Log.Level.Debug)
 end
 
 --[=[
@@ -647,7 +671,7 @@ end
 	Get a LogItem at the Info log level.
 ]=]
 function Log:AtInfo()
-	return self:_at(Log.Level.Info)
+	return At(self, Log.Level.Info)
 end
 
 --[=[
@@ -655,7 +679,7 @@ end
 	Get a LogItem at the Warning log level.
 ]=]
 function Log:AtWarning()
-	return self:_at(Log.Level.Warning)
+	return At(self, Log.Level.Warning)
 end
 
 --[=[
@@ -663,7 +687,7 @@ end
 	Get a LogItem at the Error log level.
 ]=]
 function Log:AtError()
-	return self:_at(Log.Level.Error)
+	return At(self, Log.Level.Error)
 end
 
 --[=[
@@ -671,7 +695,7 @@ end
 	Get a LogItem at the Fatal log level.
 ]=]
 function Log:AtFatal()
-	return self:_at(Log.Level.Fatal)
+	return At(self, Log.Level.Fatal)
 end
 
 --[=[
@@ -691,7 +715,7 @@ end
 
 function Log:Destroy() end
 function Log:__tostring()
-	return string.format("Log<%*>", self._name)
+	return `Log<{self._name}>`
 end
 
 -- Determine log level:
@@ -700,13 +724,11 @@ do
 		local n = string.lower(name)
 		for levelName, level in Log.Level do
 			if string.lower(levelName) == n then
-				-- 	if IS_STUDIO then
-				local attr = IS_SERVER and "LogLevel" or "LogLevelClient"
+				local attr = if IS_SERVER then "LogLevel" else "LogLevelClient"
 				local displayName = string.upper(string.sub(n, 1, 1)) .. string.sub(n, 2)
-				if tostring(Workspace:GetAttribute(attr) or "") ~= displayName then
+				if displayName ~= `{Workspace:GetAttribute(attr) or ""}` then
 					Workspace:SetAttribute(attr, displayName)
 				end
-				-- 	end
 
 				logLevel = level
 				for logItem in LogItems do
@@ -717,13 +739,13 @@ do
 			end
 		end
 
-		error("Unknown log level: " .. tostring(name))
+		error(`Unknown log level: {name}`)
 	end
 
 	local configType = type(config)
 	assert(
 		configType == "table" or configType == "string",
-		"LogConfig must return a table or a string; got " .. configType
+		`LogConfig must return a table or a string; got {configType}`
 	)
 
 	if configType == "string" then
@@ -733,7 +755,7 @@ do
 			local studioConfigType = type(config.Studio)
 			assert(
 				studioConfigType == "table" or studioConfigType == "string",
-				"LogConfig.Studio must be a table or a string; got " .. studioConfigType
+				`LogConfig.Studio must be a table or a string; got {studioConfigType}`
 			)
 
 			if studioConfigType == "string" then
@@ -745,7 +767,7 @@ do
 					local studioServerLevel = config.Studio.Server
 					assert(
 						type(studioServerLevel) == "string",
-						"LogConfig.Studio.Server must be a string; got " .. type(studioServerLevel)
+						`LogConfig.Studio.Server must be a string; got {typeof(studioServerLevel)}`
 					)
 
 					SetLogLevel(studioServerLevel)
@@ -753,7 +775,7 @@ do
 					local studioClientLevel = config.Studio.Client
 					assert(
 						type(studioClientLevel) == "string",
-						"LogConfig.Studio.Client must be a string; got " .. type(studioClientLevel)
+						`LogConfig.Studio.Client must be a string; got {typeof(studioClientLevel)}`
 					)
 
 					SetLogLevel(studioClientLevel)
@@ -789,10 +811,7 @@ do
 					end
 
 					if not fallthrough then
-						assert(
-							not set,
-							string.format("More than one LogConfig mapping matched (%* and %*)", setK or "", k or "")
-						)
+						assert(not set, `More than one LogConfig mapping matched ({setK or ""} and {k or ""})`)
 					end
 
 					if canUse then
@@ -800,7 +819,7 @@ do
 							local serverLevel = specialConfig.Server
 							assert(
 								type(serverLevel) == "string",
-								string.format("LogConfig.%*.Server must be a string; got %*", k, type(serverLevel))
+								`LogConfig.{k}.Server must be a string; got {typeof(serverLevel)}`
 							)
 
 							SetLogLevel(serverLevel)
@@ -810,7 +829,7 @@ do
 							local clientLevel = specialConfig.Client
 							assert(
 								type(clientLevel) == "string",
-								string.format("LogConfig.%*.Client must be a string; got %*", k, type(clientLevel))
+								`LogConfig.{k}.Client must be a string; got {typeof(clientLevel)}`
 							)
 
 							SetLogLevel(clientLevel)
@@ -819,7 +838,7 @@ do
 						end
 					end
 				else
-					warn(string.format("LogConfig.%* must be a table or a string; got %*", k, typeof(specialConfig)))
+					warn(`LogConfig.{k} must be a table or a string; got {typeof(specialConfig)}`)
 				end
 			end
 
@@ -834,12 +853,11 @@ do
 	end
 
 	assert(type(logLevel) == "number", "LogLevel failed to be determined")
-	-- if IS_STUDIO then
-	local attr = IS_SERVER and "LogLevel" or "LogLevelClient"
+	-- yeah yeah security issue
+	local attr = if IS_SERVER then "LogLevel" else "LogLevelClient"
 	Workspace:GetAttributeChangedSignal(attr):Connect(function()
 		SetLogLevel(Workspace:GetAttribute(attr))
 	end)
-	-- end
 end
 
 export type Log = typeof(Log.new())
