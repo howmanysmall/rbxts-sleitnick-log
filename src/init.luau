@@ -120,15 +120,33 @@ local InfoLog = require(script:FindFirstChild("InfoLog"))
 
 local Plugin = script:FindFirstAncestorOfClass("Plugin")
 
-local configModule = if Plugin
-	then Plugin:FindFirstChild("LogConfig", true)
-		or Plugin:FindFirstChild("log-config", true)
-		or ReplicatedStorage:FindFirstChild("LogConfig", true)
-		or ReplicatedStorage:FindFirstChild("log-config", true)
-	else ReplicatedStorage:FindFirstChild("LogConfig", true) or ReplicatedStorage:FindFirstChild(
-		"log-config",
-		true
-	)
+local configModule = (function()
+	if Plugin then
+		local LogConfig = Plugin:FindFirstChild("LogConfig", true)
+			or Plugin:FindFirstChild("log-config", true)
+			or ReplicatedStorage:FindFirstChild("LogConfig", true)
+			or ReplicatedStorage:FindFirstChild("log-config", true)
+
+		if LogConfig then
+			return LogConfig
+		end
+	end
+
+	if not script:IsDescendantOf(ReplicatedStorage) then
+		local CurrentParent: Instance? = script
+		while CurrentParent ~= nil and CurrentParent.Parent do
+			local LogConfig = CurrentParent:FindFirstChild("LogConfig", true)
+				or CurrentParent:FindFirstChild("log-config", true)
+			if LogConfig then
+				return LogConfig
+			end
+
+			CurrentParent = CurrentParent.Parent
+		end
+	end
+
+	return ReplicatedStorage:FindFirstChild("LogConfig", true) or ReplicatedStorage:FindFirstChild("log-config", true)
+end)()
 
 local UseInfoLogForInfo = false
 
@@ -725,6 +743,10 @@ end
 -- Determine log level:
 do
 	local function SetLogLevel(name)
+		if not name then
+			return
+		end
+
 		local n = string.lower(name)
 		for levelName, level in Log.Level do
 			if string.lower(levelName) == n then
@@ -859,9 +881,38 @@ do
 	assert(type(logLevel) == "number", "LogLevel failed to be determined")
 	-- yeah yeah security issue
 	local attr = if IS_SERVER then "LogLevel" else "LogLevelClient"
-	Workspace:GetAttributeChangedSignal(attr):Connect(function()
+	local Connection0: RBXScriptConnection? = Workspace:GetAttributeChangedSignal(attr):Connect(function()
 		SetLogLevel(Workspace:GetAttribute(attr))
 	end)
+	local Connection1: RBXScriptConnection?
+	local Connection2: RBXScriptConnection?
+
+	local function Cleanup()
+		if Connection0 then
+			if Connection0.Connected then
+				Connection0:Disconnect()
+			end
+			Connection0 = nil
+		end
+		if Connection1 then
+			if Connection1.Connected then
+				Connection1:Disconnect()
+			end
+			Connection1 = nil
+		end
+		if Connection2 then
+			if Connection2.Connected then
+				Connection2:Disconnect()
+			end
+			Connection2 = nil
+		end
+	end
+	Connection1 = script.AncestryChanged:Connect(function()
+		if not script:IsDescendantOf(game) then
+			Cleanup()
+		end
+	end)
+	Connection2 = script.Destroying:Once(Cleanup)
 end
 
 export type Log = typeof(Log.new())
